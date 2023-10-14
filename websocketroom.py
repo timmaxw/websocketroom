@@ -1,3 +1,4 @@
+import argparse
 import logging
 import json
 import re
@@ -52,7 +53,7 @@ class Server:
         async with trio.open_nursery() as nursery:
             async def send_loop():
                 async for message in my_receive_channel:
-                    logging.info(f"message to {request.path!r} ({len(message)} bytes)")
+                    logging.debug(f"message to {request.path!r} ({len(message)} bytes)")
                     await my_conn.send_message(message)
 
             nursery.start_soon(send_loop)
@@ -62,7 +63,7 @@ class Server:
                     message = await my_conn.get_message()
                 except trio_websocket.ConnectionClosed:
                     break
-                logging.info(f"message from {request.path!r} ({len(message)} bytes)")
+                logging.debug(f"message from {request.path!r} ({len(message)} bytes)")
                 for peer_name, peer_send_channel in room.items():
                     if peer_name != my_name:
                         peer_send_channel.send_nowait(message)
@@ -82,4 +83,12 @@ class Server:
             for peer_send_channel in room.values():
                 peer_send_channel.send_nowait(exit_message)
 
-        
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, required=True)
+    args = parser.parse_args()
+
+    server = Server(port = args.port)
+    trio.run(server.main)
