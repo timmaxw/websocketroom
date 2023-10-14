@@ -8,14 +8,15 @@ import trio.testing
 import trio_websocket
 
 class Server:
-    def __init__(self, *, port: int):
+    def __init__(self, *, host: str, port: int):
+        self.host = host
         self.port = port
         self.rooms: dict[str, dict[str, trio.MemorySendChannel]] = {}
 
     async def main(self):
         logging.info(f"server starting on port {self.port}")
         try:
-            await trio_websocket.serve_websocket(self.handle_connection, "0.0.0.0", self.port, ssl_context=None)
+            await trio_websocket.serve_websocket(self.handle_connection, self.host, self.port, ssl_context=None)
         finally:
             logging.info(f"server stopping")
 
@@ -87,8 +88,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--host", type=str, required=True)
     parser.add_argument("--port", type=int, required=True)
     args = parser.parse_args()
 
-    server = Server(port = args.port)
+    server = Server(host=args.host, port=args.port)
     trio.run(server.main)
